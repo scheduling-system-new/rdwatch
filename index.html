@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>名錶雷達站 RD-WATCH 線上排班系統</title>
+    <title>名錶雷達站 RD-WATCH 線上排班系統 (APP Mode)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <style>
         /* 定義主題配色 */
         :root {
-            --color-primary-dark: #121212; /* Banner 底部延伸色 */
-            --color-accent-red: #D9534F;   /* 低彩度紅色按鈕 */
+            --color-primary-dark: #121212; 
+            --color-accent-red: #D9534F;
             --color-light-gray: #F4F4F4;
         }
 
-        /* 擴展 Tailwind CSS 配置 */
         tailwind.config = {
             theme: {
                 extend: {
@@ -29,38 +28,62 @@
 
         /* 圓弧銜接效果 */
         .curved-banner-container {
-            /* 圖片容器高度 250px */
             height: 250px; 
             padding-bottom: 50px;
         }
-        /* 確保圖片正確顯示，即使尺寸為 1080x400 */
         .banner-image {
+             /* 根據 1080x400 像素比例，確保圖片覆蓋且位於頂部 */
              width: 100%;
              height: 100%;
-             object-fit: cover; /* 確保圖片覆蓋整個容器 */
-             object-position: center;
+             object-fit: cover; 
+             object-position: top; /* 確保頂部內容可見 */
              opacity: 0.9;
         }
-
         .curved-background-shape {
             content: '';
             position: absolute;
-            bottom: -50px; /* 向上拉動圓弧的半徑 */
+            bottom: -50px; 
             left: 0;
             right: 0;
-            height: 100px; /* 圓弧高度 */
-            background-color: white; /* 讓內容區域背景色為白色 */
-            border-top-left-radius: 50% 50%; /* 圓弧半徑 */
+            height: 100px; 
+            background-color: white; 
+            border-top-left-radius: 50% 50%; 
             border-top-right-radius: 50% 50%;
             z-index: 10; 
         }
-        
         .main-content-wrapper {
             background-color: white;
             position: relative;
             z-index: 20; 
-            margin-top: -50px; /* 負邊距向上拉動重疊 */
+            margin-top: -50px; 
             padding-top: 20px;
+        }
+
+        /* 滾動式選單樣式 */
+        .scroll-picker {
+            overflow-y: scroll;
+            max-height: 200px;
+            scroll-snap-type: y mandatory;
+            /* 隱藏 Chrome/Safari 捲軸 */
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .scroll-picker::-webkit-scrollbar {
+            display: none;
+        }
+        .scroll-item {
+            scroll-snap-align: center;
+            height: 50px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .scroll-item-active {
+             font-weight: bold;
+             color: var(--color-dark-bg);
+             background-color: var(--color-light-gray);
+             border-radius: 8px;
         }
 
         /* 菜單動畫 */
@@ -73,7 +96,7 @@
     </style>
 </head>
 
-<body class="bg-light-gray text-gray-800 antialiased">
+<body class="bg-light-gray text-gray-800 antialiased" @scroll="checkScroll">
 
 <div id="app" class="max-w-screen-md mx-auto shadow-xl min-h-screen bg-white">
     <header class="p-4 flex justify-between items-center fixed top-0 left-0 right-0 max-w-screen-md mx-auto z-50 bg-white shadow-md">
@@ -85,7 +108,7 @@
         </button>
     </header>
 
-    <main class="pt-16">
+    <main id="main-content" class="pt-16">
         <div class="curved-banner-container relative overflow-hidden bg-dark-bg">
             <img src="./線上排班系統Benner.jpg" alt="線上排班系統 Banner" 
                  class="banner-image">
@@ -94,13 +117,19 @@
 
         <div class="main-content-wrapper">
             <section v-if="currentPage === '當月班表'" class="p-4">
-                <h2 class="text-2xl font-bold mb-2">當月班表</h2>
                 
-                <div class="text-left mb-6 text-xl font-medium text-gray-600">
-                    {{ currentYear }} 年 {{ currentMonth }} 月
+                <div class="flex items-center mb-6">
+                    <h2 class="text-2xl font-bold">班表</h2>
+                    
+                    <select v-model="selectedMonthKey" 
+                            class="ml-4 p-2 border border-gray-300 rounded-lg text-lg font-medium text-gray-800 appearance-none bg-white">
+                        <option v-for="key in monthKeys" :value="key" :key="key">
+                            {{ key.replace('-', ' 年 ') }} 月
+                        </option>
+                    </select>
                 </div>
 
-                <div class="flex justify-around bg-gray-100 p-1 rounded-full mb-6 shadow-inner">
+                <div class="flex justify-around bg-gray-100 p-1 rounded-full my-6 shadow-inner">
                     <button 
                         @click="isWorkingMode = true"
                         :class="{'bg-white shadow-md text-dark-bg': isWorkingMode, 'text-gray-500': !isWorkingMode}"
@@ -109,7 +138,7 @@
                     </button>
                     <button 
                         @click="isWorkingMode = false"
-                        :class="{'bg-white shadow-md text-dark-bg': !isWorkingMode, 'text-gray-500': isWorkingMode}"
+                        :class="{'bg-white shadow-md text-dark-bg': !isWorkingMode, 'text-gray-500': !isWorkingMode}"
                         class="flex-1 py-2 rounded-full font-medium transition duration-200">
                         休假人員
                     </button>
@@ -118,8 +147,8 @@
                 <div class="grid grid-cols-1 gap-6">
                     <div class="p-4 border border-gray-100 rounded-lg shadow-sm">
                         <h3 class="text-lg font-bold flex justify-between items-center mb-3">
-                            台北店班表
-                            <span class="text-sm text-gray-500">員工人數: {{ taipeiStaff.length }}</span>
+                            台北店
+                            <span class="text-sm text-gray-500">人數: {{ taipeiStaff.length }}</span>
                         </h3>
                         <CalendarView 
                             :staff="taipeiStaff" 
@@ -127,50 +156,52 @@
                             :year="currentYear"
                             :month="currentMonth"
                             :mock-schedules="mockSchedules"
+                            :staff-limits="staffLimits"
                         />
                     </div>
 
                     <div class="p-4 border border-gray-100 rounded-lg shadow-sm">
                         <h3 class="text-lg font-bold flex justify-between items-center mb-3">
-                            台中店班表
-                            <span class="text-sm text-gray-500">員工人數: {{ taichungStaff.length }}</span>
+                            台中店
+                            <span class="text-sm text-gray-500">人數: {{ taichungStaff.length }}</span>
                         </h3>
-                         <CalendarView 
+                        <CalendarView 
                             :staff="taichungStaff" 
                             :is-working-mode="isWorkingMode" 
                             :year="currentYear"
                             :month="currentMonth"
                             :mock-schedules="mockSchedules"
+                            :staff-limits="staffLimits"
                         />
                     </div>
                 </div>
 
             </section>
 
-            <section v-if="currentPage === '次月班表'" class="p-4">
-                <NextMonthSchedule 
-                    :current-year="currentYear" 
-                    :next-month="nextMonth" 
-                    :next-month-days="nextMonthDays" 
+            <section v-if="currentPage === '我要排班'" class="p-4">
+                <ScheduleRequest 
+                    :staff-limits="staffLimits" 
                     :taipei-staff="taipeiStaff" 
                     :taichung-staff="taichungStaff" 
-                    :mock-schedules="mockSchedules"
+                    :month-keys="monthKeys"
+                    @update-schedule="updateMockSchedules"
+                    @goto-home="currentPage = '當月班表'" 
                 />
-            </section>
-
-            <section v-if="currentPage === '我要排班'" class="p-4">
-                <ScheduleRequest :current-month="currentMonth" :current-year="currentYear" @goto-home="currentPage = '當月班表'" />
             </section>
 
             <section v-if="currentPage === '我要請假'" class="p-4">
                 <LeaveRequest @update-schedule="updateMockSchedules" />
             </section>
-
-            <section v-if="currentPage === '後台管理'" class="p-4">
-                <AdminPanel />
-            </section>
         </div>
     </main>
+    
+    <button v-show="showScrollToTop" @click="scrollToTop" 
+            class="fixed bottom-4 right-4 bg-dark-bg text-white p-3 rounded-full shadow-lg transition duration-300 hover:bg-gray-700 z-40">
+        <svg class="w-6 h-6 transform -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+    </button>
+
 
     <transition name="slide">
         <div v-if="isMenuOpen" @click="toggleMenu" 
@@ -178,11 +209,14 @@
             <div @click.stop 
                  class="fixed right-0 top-0 bottom-0 w-3/4 max-w-xs bg-white shadow-2xl p-6 pt-16">
                 <ul class="space-y-4 text-lg">
-                    <li v-for="page in pages" :key="page">
-                        <button @click="navigateTo(page)" 
-                                :class="{'font-bold text-dark-bg': currentPage === page}"
-                                class="w-full text-left py-2 hover:bg-gray-50 rounded transition duration-150">
-                            {{ page }}
+                    <li>
+                        <button @click="navigateTo('我要排班')" class="w-full text-left py-2 hover:bg-gray-50 rounded transition duration-150">
+                            我要排班
+                        </button>
+                    </li>
+                    <li>
+                        <button @click="navigateTo('我要請假')" class="w-full text-left py-2 hover:bg-gray-50 rounded transition duration-150">
+                            我要請假
                         </button>
                     </li>
                 </ul>
@@ -196,20 +230,15 @@
 
     // --- 輔助函數 ---
     const getDaysInMonth = (year, month) => {
-        // month is 1-indexed (Jan=1, Feb=2...)
         return new Date(year, month, 0).getDate();
     };
-
-    // 獲取一個月的第一天是星期幾 (0=日, 6=六)
     const getFirstDayOfMonth = (year, month) => {
-        // month is 1-indexed
         return new Date(year, month - 1, 1).getDay();
     };
 
-
     // --- Component: 月曆視圖 (CalendarView) ---
     const CalendarView = {
-        props: ['staff', 'isWorkingMode', 'year', 'month', 'mockSchedules'],
+        props: ['staff', 'isWorkingMode', 'year', 'month', 'mockSchedules', 'staffLimits'],
         template: `
             <div class="calendar mt-4 bg-gray-50 p-2 rounded-lg shadow-inner">
                 <div class="grid grid-cols-7 text-center text-sm font-bold text-gray-500 mb-1">
@@ -222,7 +251,7 @@
                     <div v-for="day in monthDays" :key="day" 
                          class="aspect-square p-0.5 border border-gray-200 rounded-sm overflow-hidden"
                          :class="{'bg-white': true}">
-                        <div class="text-xs font-semibold text-right p-0.5 mb-1" :class="{'text-red-500': new Date(year, month - 1, day).getDay() === 0, 'text-gray-500': new Date(year, month - 1, day).getDay() === 6}">
+                        <div class="text-xs font-semibold text-right p-0.5 mb-1" :class="{'text-red-500': new Date(year, month - 1, day).getDay() === 0}">
                             {{ day }}
                         </div>
                         
@@ -240,6 +269,26 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="mt-4 p-3 bg-white rounded-lg border border-gray-100 shadow-inner">
+                    <h4 class="text-sm font-bold mb-2">員工休假/加班統計</h4>
+                    <ul class="space-y-1 text-xs">
+                        <li v-for="stats in staffStats" :key="stats.id" class="grid grid-cols-5 text-center border-b last:border-b-0 py-1">
+                            <span class="font-medium text-left">{{ stats.name }}</span>
+                            <span class="text-gray-600">{{ stats.maxOffDays }}</span>
+                            <span class="text-blue-600">{{ stats.scheduledOffDays }}</span>
+                            <span class="text-red-500">{{ stats.extraLeaveDays + stats.sickLeaveDays + stats.personalLeaveDays}}</span>
+                            <span class="text-green-600">{{ stats.overtimeDays }}</span>
+                        </li>
+                        <li class="grid grid-cols-5 text-center font-bold text-xs pt-2 border-t">
+                            <span class="text-left">人員</span>
+                            <span>可休天數</span>
+                            <span>排休天數</span>
+                            <span>請假/事假</span>
+                            <span>加班天數</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
         `,
         computed: {
@@ -247,12 +296,55 @@
                 return getDaysInMonth(this.year, this.month);
             },
             startPadding() {
-                // 計算需要填補的空白天數
                 return getFirstDayOfMonth(this.year, this.month);
             },
-            // 模擬請假類型縮寫
             leaveTypeMap() {
-                return { 'Sick': '病', 'Personal': '事', 'SpecialAnnual': '特' };
+                return { 'Sick': '病', 'Personal': '事', 'SpecialAnnual': '特', 'GeneralOff': '休' };
+            },
+            // 計算每位員工的休假和加班天數
+            staffStats() {
+                return this.staff.map(employee => {
+                    const maxOffDays = this.staffLimits[employee.name] || 0;
+                    const employeeSchedules = this.mockSchedules.filter(s => 
+                        s.employeeId === employee.id && 
+                        s.date.startsWith(`${this.year}-${this.month}-`)
+                    );
+
+                    // 計算排休天數 (GeneralOff/SpecialAnnual)
+                    const scheduledOffDays = employeeSchedules.filter(s => 
+                        s.type === 'GeneralOff' || s.type === 'SpecialAnnual'
+                    ).length;
+
+                    // 計算其他請假天數 (Sick/Personal)
+                    const sickLeaveDays = employeeSchedules.filter(s => 
+                        s.type === 'Leave' && s.leaveType === 'Sick'
+                    ).length;
+                    const personalLeaveDays = employeeSchedules.filter(s => 
+                        s.type === 'Leave' && s.leaveType === 'Personal'
+                    ).length;
+
+                    // 超額轉事假天數 (由排班頁面決定)
+                    let extraLeaveDays = employeeSchedules.filter(s => 
+                        s.type === 'Personal' && s.isExtra
+                    ).length;
+                    
+                    // 計算加班天數 (排休 < 可休)
+                    let overtimeDays = 0;
+                    if (scheduledOffDays < maxOffDays) {
+                        overtimeDays = maxOffDays - scheduledOffDays;
+                    }
+
+                    return {
+                        id: employee.id,
+                        name: employee.name,
+                        maxOffDays: maxOffDays,
+                        scheduledOffDays: scheduledOffDays,
+                        extraLeaveDays: extraLeaveDays, // 超額的排休，已經轉為 Personal (事假)
+                        sickLeaveDays: sickLeaveDays,
+                        personalLeaveDays: personalLeaveDays,
+                        overtimeDays: overtimeDays,     // 列入加班天數
+                    };
+                });
             }
         },
         methods: {
@@ -274,225 +366,235 @@
                             isLeave = true;
                             leaveTypeShort = this.leaveTypeMap[schedule.leaveType] || '假';
                         }
+                        // 將 GeneralOff (一般休) 和 SpecialAnnual (特休) 視為排休
                         if (schedule.type === 'GeneralOff' || schedule.type === 'SpecialAnnual') {
                             isOffDay = true;
                         }
+                        // 排班頁面超額轉為 Personal 的，也算請假
+                        if (schedule.type === 'Personal' && schedule.isExtra) {
+                            isLeave = true;
+                            leaveTypeShort = '事';
+                        }
                     }
 
-                    // 只有在當天是值班、或當天是休假/請假且模式為休假時才顯示
-                    // 為了月曆模式，我們全部顯示，讓用戶看到誰在排休/請假
-                    dailyData.push({
-                        employeeId: employee.id,
-                        name: employee.name,
-                        isLeave,
-                        isOffDay,
-                        leaveTypeShort
-                    });
-                });
+                    // 篩選邏輯:
+                    if (this.isWorkingMode) {
+                        // 值班模式: 顯示沒有休假/請假的人 (即值班人員)，以及請假的人
+                        if (!isOffDay && !isLeave) {
+                            dailyData.push({ employeeId: employee.id, name: employee.name, isLeave: false, isOffDay: false });
+                        } else if (isLeave) {
+                             dailyData.push({ employeeId: employee.id, name: employee.name, isLeave: true, leaveTypeShort });
+                        }
+                    } else {
+                        // 休假模式: 顯示有排休或請假的人員
+                        if (isOffDay || isLeave) {
+                            dailyData.push({ employeeId: employee.id, name: employee.name, isLeave, isOffDay, leaveTypeShort });
+                        }
+                    }
 
-                // 過濾掉值班模式下不是請假也不是休假的員工 (這樣月曆看起來才不會太擁擠)
-                if (this.isWorkingMode) {
-                    return dailyData.filter(d => d.isLeave || d.isOffDay === false);
-                }
+                });
                 
+                // 值班模式補齊未排休/未請假的人
+                if (this.isWorkingMode) {
+                    const scheduledIds = dailyData.map(d => d.employeeId);
+                    this.staff.filter(s => !scheduledIds.includes(s.id)).forEach(employee => {
+                        dailyData.push({ employeeId: employee.id, name: employee.name, isLeave: false, isOffDay: false });
+                    });
+                }
+
+
                 return dailyData;
             }
         }
     };
 
 
-    // --- Component: 次月班表 (NextMonthSchedule) ---
-    const NextMonthSchedule = {
-        props: ['currentYear', 'nextMonth', 'nextMonthDays', 'taipeiStaff', 'taichungStaff', 'mockSchedules'],
-        components: { CalendarView },
-        data() {
-            return {
-                isWorkingMode: true,
-                isSchedulingOpen: false, 
-            }
-        },
-        computed: {
-            nextMonthYear() {
-                return this.nextMonth === 1 ? this.currentYear + 1 : this.currentYear;
-            }
-        },
-        mounted() {
-            // 模擬判斷排班是否開放 (24號到28號)
-            const today = new Date().getDate();
-            this.isSchedulingOpen = (today >= 24 && today <= 28);
-        },
-        template: `
-            <div class="p-4">
-                <h2 class="text-2xl font-bold mb-2">次月班表</h2>
-
-                <div class="text-left mb-6 text-xl font-medium text-gray-600">
-                    {{ nextMonthYear }} 年 {{ nextMonth }} 月
-                </div>
-                
-                <div v-if="!isSchedulingOpen" class="relative bg-gray-200 h-96 flex items-center justify-center rounded-lg overflow-hidden">
-                    <div class="absolute inset-0 bg-white opacity-80 z-10"></div>
-                    <p class="text-3xl font-bold text-gray-400 z-20" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">尚未開放排班</p>
-                    
-                    <div class="absolute inset-0 grid grid-cols-7 gap-1 p-2 text-gray-300 text-xs z-0">
-                        <div v-for="i in nextMonthDays" :key="'d'+i" class="text-center">{{ i }}</div>
-                    </div>
-                </div>
-
-                <div v-else>
-                    <div class="flex justify-around bg-gray-100 p-1 rounded-full mb-6 shadow-inner">
-                        <button 
-                            @click="isWorkingMode = true"
-                            :class="{'bg-white shadow-md text-dark-bg': isWorkingMode, 'text-gray-500': !isWorkingMode}"
-                            class="flex-1 py-2 rounded-full font-medium transition duration-200">
-                            值班人員
-                        </button>
-                        <button 
-                            @click="isWorkingMode = false"
-                            :class="{'bg-white shadow-md text-dark-bg': !isWorkingMode, 'text-gray-500': isWorkingMode}"
-                            class="flex-1 py-2 rounded-full font-medium transition duration-200">
-                            休假人員
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-6">
-                        <div class="p-4 border border-gray-100 rounded-lg shadow-sm">
-                            <h3 class="text-lg font-bold flex justify-between items-center mb-3">
-                                台北店班表
-                                <span class="text-sm text-gray-500">員工人數: {{ taipeiStaff.length }}</span>
-                            </h3>
-                            <CalendarView 
-                                :staff="taipeiStaff" 
-                                :is-working-mode="isWorkingMode" 
-                                :year="nextMonthYear"
-                                :month="nextMonth"
-                                :mock-schedules="mockSchedules"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `
-    };
-
-    // --- Component: 我要排班 (ScheduleRequest) (邏輯簡化不變) ---
+    // --- Component: 我要排班 (ScheduleRequest) ---
     const ScheduleRequest = {
-        // ... (保持原有的登入、排班邏輯)
-        props: ['currentYear', 'currentMonth'],
-        emits: ['gotoHome'],
+        props: ['staffLimits', 'taipeiStaff', 'taichungStaff', 'monthKeys'],
+        emits: ['updateSchedule', 'gotoHome'],
         data() {
             return {
-                isLoggedIn: false,
-                employeeId: '',
-                password: '',
-                currentEmployee: {
-                    name: '王小明', 
-                    id: 'E001', 
-                    maxOffDays: 8, // 可排休天數
-                    offDaysRequested: 0,
-                },
-                selectedDates: [],
-                showLeaveModal: false,
-                tempSelectedDate: null,
-                leaveType: 'GeneralOff', // 1.一般排休, 2.事假, 3.特休
-                leaveOptions: [
-                    { value: 'GeneralOff', label: '一般排休' },
-                    { value: 'Personal', label: '事假' },
-                    { value: 'SpecialAnnual', label: '特休' },
-                ]
+                step: 1, // 1:選月份/分店, 2:選員工(彈窗), 3:排班月曆
+                selectedMonth: null, // YYYY-MM
+                selectedLocation: null,
+                selectedEmployee: null, // 員工物件 {id, name, location}
+                showStaffPicker: false,
+                
+                // 月曆相關
+                selectedDates: [], // 格式: { date: 'YYYY-M-D', type: 'GeneralOff'/'Personal' }
+                tempMaxOffDays: 0,
             }
         },
         computed: {
+            currentMonth() {
+                return this.selectedMonth ? parseInt(this.selectedMonth.split('-')[1]) : 0;
+            },
+            currentYear() {
+                return this.selectedMonth ? parseInt(this.selectedMonth.split('-')[0]) : 0;
+            },
+            currentMonthDays() {
+                return this.selectedMonth ? getDaysInMonth(this.currentYear, this.currentMonth) : 0;
+            },
+            // 計算已選取的 一般排休 天數
+            selectedGeneralOffs() {
+                return this.selectedDates.filter(d => d.type === 'GeneralOff').length;
+            },
             remainingOffDays() {
-                return this.currentEmployee.maxOffDays - this.selectedDates.length;
+                return this.tempMaxOffDays - this.selectedGeneralOffs;
             },
             calendarGrid() {
-                 // 修正：計算當月天數，以便渲染月曆
-                const daysInMonth = getDaysInMonth(this.currentYear, this.currentMonth);
-                const firstDay = getFirstDayOfMonth(this.currentYear, this.currentMonth);
-                const grid = [];
-                for (let i = 0; i < firstDay; i++) {
-                    grid.push(null); // 填充上個月的空白
-                }
-                for (let day = 1; day <= daysInMonth; day++) {
-                    grid.push(day);
-                }
-                return grid;
+                 const daysInMonth = this.currentMonthDays;
+                 const firstDay = getFirstDayOfMonth(this.currentYear, this.currentMonth);
+                 const grid = [];
+                 for (let i = 0; i < firstDay; i++) {
+                     grid.push(null);
+                 }
+                 for (let day = 1; day <= daysInMonth; day++) {
+                     grid.push(day);
+                 }
+                 return grid;
+            },
+            currentLocationStaff() {
+                return this.selectedLocation === 'Taipei' ? this.taipeiStaff : this.taichungStaff;
             }
         },
         methods: {
-            handleLogin() {
-                if (this.employeeId === 'E001' && this.password === '1234') {
-                    this.isLoggedIn = true;
-                    this.selectedDates = []; 
-                } else {
-                    alert('登入失敗');
-                }
+            selectLocation(location) {
+                this.selectedLocation = location;
+                this.showStaffPicker = true;
+            },
+            selectStaff(employee) {
+                this.selectedEmployee = employee;
+                this.tempMaxOffDays = this.staffLimits[employee.name] || 0;
+                this.selectedDates = []; // 清空已選日期
+                this.showStaffPicker = false;
+                this.step = 3; // 進入排班步驟
             },
             toggleDateSelection(day) {
-                if (!day) return; // 忽略空白格子
+                if (!day) return;
                 
                 const dateKey = `${this.currentYear}-${this.currentMonth}-${day}`;
-                const index = this.selectedDates.findIndex(d => d.date === dateKey); // 檢查是否有該日期的紀錄
+                const index = this.selectedDates.findIndex(d => d.date === dateKey);
 
                 if (index > -1) {
-                    // 取消選取
-                    this.selectedDates.splice(index, 1);
+                    this.selectedDates.splice(index, 1); // 取消選取
                 } else {
-                    // 點擊選取
-                    this.tempSelectedDate = dateKey;
-                    this.showLeaveModal = true;
+                    const currentGeneralOffs = this.selectedGeneralOffs;
+                    
+                    if (currentGeneralOffs >= this.tempMaxOffDays) {
+                        // 超額自動轉為 Personal (事假)，並標註為 isExtra
+                        if(confirm(`您的可排休天數 (${this.tempMaxOffDays}天) 已滿，此日期將自動轉為事假處理。是否繼續選取？`)) {
+                             this.selectedDates.push({ date: dateKey, type: 'Personal', isExtra: true });
+                        }
+                    } else {
+                        this.selectedDates.push({ date: dateKey, type: 'GeneralOff' });
+                    }
                 }
             },
             isDateSelected(day) {
-                if (!day) return false;
+                if (!day) return null; // null: 未選取
                 const dateKey = `${this.currentYear}-${this.currentMonth}-${day}`;
-                return this.selectedDates.some(d => d.date === dateKey);
-            },
-            confirmLeaveType() {
-                const generalOffCount = this.selectedDates.filter(d => d.type === 'GeneralOff').length;
+                const item = this.selectedDates.find(d => d.date === dateKey);
                 
-                if (this.leaveType === 'GeneralOff' && generalOffCount >= this.currentEmployee.maxOffDays) {
-                    alert('您的休假天數已滿，請選擇其他假別');
-                    return;
-                }
-                
-                // 確定選取
-                if (this.tempSelectedDate && !this.selectedDates.some(d => d.date === this.tempSelectedDate)) {
-                    this.selectedDates.push({ date: this.tempSelectedDate, type: this.leaveType });
-                }
-                this.showLeaveModal = false;
-                this.tempSelectedDate = null;
+                if (!item) return null;
+                return item.type; // 返回 GeneralOff 或 Personal
             },
             submitSchedule() {
                 if (this.selectedDates.length === 0) {
-                    alert('請選擇您要排休的日期！');
+                    alert('請選擇您要休假的日期！');
                     return;
                 }
+                
+                // 將所有選取的休假日期發送到 App 實例更新 mockSchedules
+                this.selectedDates.forEach(item => {
+                    const dateParts = item.date.split('-'); 
+                    this.$emit('updateSchedule', {
+                        employeeId: this.selectedEmployee.id,
+                        date: `${dateParts[0]}-${parseInt(dateParts[1])}-${parseInt(dateParts[2])}`,
+                        type: item.type,
+                        isExtra: item.isExtra || false // 標註是否為超額轉事假
+                    });
+                });
+
                 alert('排班申請已成功送出！');
                 this.$emit('gotoHome');
+            },
+            // 滾動選單輔助方法 (用於確保選單中間項對齊)
+            onScroll(event) {
+                const picker = event.target;
+                const itemHeight = 50;
+                const center = picker.scrollTop + picker.offsetHeight / 2;
+                const closestIndex = Math.round(center / itemHeight) - Math.floor(picker.offsetHeight / (2 * itemHeight));
+                this.currentLocationStaff.forEach((staff, index) => {
+                    staff.isActive = index === closestIndex;
+                });
             }
         },
         template: `
             <div>
-                <h2 class="text-2xl font-bold mb-4">我要排班</h2>
+                <h2 class="text-2xl font-bold mb-6">我要排班</h2>
                 
-                <div v-if="!isLoggedIn" class="space-y-4 p-6 bg-gray-50 rounded-lg shadow-md">
-                    <input v-model="employeeId" type="text" placeholder="員工編號" class="w-full p-3 border rounded-lg focus:ring-accent-red focus:border-accent-red">
-                    <input v-model="password" type="password" placeholder="密碼" class="w-full p-3 border rounded-lg focus:ring-accent-red focus:border-accent-red">
-                    <button @click="handleLogin" class="w-full bg-dark-bg text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition duration-150">
-                        登 入
-                    </button>
+                <div v-if="step === 1" class="space-y-6">
+                    <div class="p-4 bg-gray-50 rounded-lg shadow-md">
+                        <label class="block text-lg font-semibold mb-2">1. 選擇排班月份</label>
+                         <select v-model="selectedMonth" 
+                                class="w-full p-3 border rounded-lg focus:ring-dark-bg focus:border-dark-bg appearance-none">
+                            <option :value="null" disabled>-- 請選擇月份 --</option>
+                            <option v-for="key in monthKeys" :value="key" :key="key">
+                                {{ key.replace('-', ' 年 ') }} 月
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div v-if="selectedMonth" class="p-4 bg-gray-50 rounded-lg shadow-md">
+                        <label class="block text-lg font-semibold mb-2">2. 選擇分店</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button @click="selectLocation('Taipei')" class="bg-dark-bg text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition duration-150">
+                                台北店
+                            </button>
+                            <button @click="selectLocation('Taichung')" class="bg-dark-bg text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition duration-150">
+                                台中店
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
-                <div v-else>
+                <div v-if="showStaffPicker" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div class="bg-white p-6 rounded-xl shadow-2xl w-11/12 max-w-sm">
+                        <h3 class="text-xl font-bold mb-4 text-center">選擇排班人員 ({{ selectedLocation === 'Taipei' ? '台北店' : '台中店' }})</h3>
+                        
+                        <div class="scroll-picker my-4 border-y border-gray-300">
+                             <div v-for="employee in currentLocationStaff" :key="employee.id"
+                                  @click="selectStaff(employee)"
+                                  class="scroll-item text-gray-500 hover:bg-gray-100 transition duration-100"
+                                  :class="{'scroll-item-active': selectedEmployee && selectedEmployee.id === employee.id}">
+                                {{ employee.name }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button @click="showStaffPicker = false; selectedLocation = null;" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">取消</button>
+                            <button @click="selectedEmployee ? selectStaff(selectedEmployee) : alert('請選擇人員');" class="px-4 py-2 bg-dark-bg text-white rounded-lg hover:bg-gray-700 transition duration-150">確認</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="step === 3">
+                     <p class="text-lg font-semibold mb-4 text-center p-2 bg-gray-100 rounded-lg">
+                        {{ selectedEmployee.name }} ({{ selectedEmployee.location === 'Taipei' ? '台北店' : '台中店' }})
+                    </p>
+                    
                     <div class="flex justify-around p-3 bg-gray-100 rounded-lg mb-4 text-center">
                         <div>
-                            <p class="text-xs text-gray-500">每月可排休天數</p>
-                            <p class="text-xl font-bold">{{ currentEmployee.maxOffDays }} 天</p>
+                            <p class="text-xs text-gray-500">可排休天數</p>
+                            <p class="text-xl font-bold">{{ tempMaxOffDays }} 天</p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-500">剩餘可排休天數</p>
-                            <p class="text-xl font-bold text-accent-red">{{ remainingOffDays }} 天</p>
+                            <p class="text-xs text-gray-500">剩餘排休額度</p>
+                            <p class="text-xl font-bold" :class="{'text-accent-red': remainingOffDays < 0, 'text-green-600': remainingOffDays > 0}">
+                                {{ remainingOffDays }} 天
+                            </p>
                         </div>
                     </div>
                     
@@ -505,64 +607,51 @@
                         <div class="grid grid-cols-7 gap-1">
                             <div v-for="(day, index) in calendarGrid" :key="index" 
                                  @click="toggleDateSelection(day)"
-                                 class="aspect-square flex flex-col items-center justify-center p-1 rounded-lg transition duration-100 cursor-pointer"
+                                 class="aspect-square flex flex-col items-center justify-center p-1 rounded-lg transition duration-100 cursor-pointer text-sm"
                                  :class="{
-                                     'bg-gray-100': !day, /* 上個月的空白 */
-                                     'bg-gray-300': day && isDateSelected(day), /* 選取起來的深色 */
+                                     'bg-gray-100': !day, 
+                                     'bg-green-200 border-green-500': isDateSelected(day) === 'GeneralOff', 
+                                     'bg-red-200 border-red-500': isDateSelected(day) === 'Personal',
                                      'hover:bg-gray-100': day && !isDateSelected(day)
                                  }">
                                 <span v-if="day" class="text-lg font-semibold">{{ day }}</span>
                                 <span v-else></span>
-                                <span v-if="day" class="text-xs text-gray-500 mt-1">
-                                    <span v-if="isDateSelected(day)">已選</span> 
-                                    <span v-else>...</span>
+                                <span v-if="day" class="text-xs mt-1 font-medium" :class="{'text-green-800': isDateSelected(day) === 'GeneralOff', 'text-red-800': isDateSelected(day) === 'Personal'}">
+                                    <span v-if="isDateSelected(day) === 'GeneralOff'">排休</span> 
+                                    <span v-else-if="isDateSelected(day) === 'Personal'">事假</span> 
+                                    <span v-else class="text-gray-500">...</span>
                                 </span>
                             </div>
                         </div>
                     </div>
                     
-                    <div v-if="showLeaveModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div class="bg-white p-6 rounded-xl shadow-2xl w-11/12 max-w-sm">
-                            <h3 class="text-lg font-bold mb-4">選擇假別</h3>
-                            <div class="space-y-3">
-                                <div v-for="option in leaveOptions" :key="option.value" class="flex items-center">
-                                    <input type="radio" :id="option.value" :value="option.value" v-model="leaveType" class="text-accent-red focus:ring-accent-red">
-                                    <label :for="option.value" class="ml-3 text-base">{{ option.label }}</label>
-                                </div>
-                            </div>
-                            <div class="mt-6 flex justify-end space-x-3">
-                                <button @click="showLeaveModal = false; tempSelectedDate = null;" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">取消</button>
-                                <button @click="confirmLeaveType" class="px-4 py-2 bg-accent-red text-white rounded-lg hover:bg-red-600 transition duration-150">確認</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button @click="submitSchedule" class="w-full bg-accent-red text-white py-3 rounded-lg font-semibold mt-6 hover:bg-red-600 transition duration-150">
-                        確認送出班表
+                    <button @click="submitSchedule" class="w-full bg-dark-bg text-white py-3 rounded-lg font-semibold mt-6 hover:bg-gray-700 transition duration-150">
+                        確認送出排班
                     </button>
                 </div>
             </div>
         `
     };
 
-    // --- Component: 我要請假 (LeaveRequest) (邏輯簡化不變) ---
+    // --- Component: 我要請假 (LeaveRequest) ---
     const LeaveRequest = {
-        // ... (保持原有的登入、請假邏輯)
+        // ... (保持原有的請假邏輯，但移除登入，簡化為單一員工)
         emits: ['updateSchedule'],
         data() {
+             const now = new Date();
+             const timeZone = 'Asia/Taipei';
+             const today = new Date(now.toLocaleString('en-US', { timeZone })).toISOString().split('T')[0];
+
             return {
-                isLoggedIn: false,
-                employeeId: '',
-                password: '',
-                selectedDate: null,
+                selectedDate: today,
                 leaveHour: '8.0',
-                leaveType: 'Sick', // 病假, 事假
+                leaveType: 'Sick', // Sick, Personal
+                employeeId: 'E001', // 暫時固定為 E001 (Aaron)
+                employeeName: 'Aaron',
                 receiptFile: null,
                 showAlert: false,
                 leaveHoursOptions: [
-                    '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', 
-                    '5.0', '5.5', '6.0', '6.5', '7.0', '7.5', '8.0', '8.5', 
-                    '整天'
+                    '1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '整天'
                 ],
                 leaveTypeOptions: [
                     { value: 'Sick', label: '病假' },
@@ -571,13 +660,6 @@
             }
         },
         methods: {
-            handleLogin() {
-                if (this.employeeId === 'E001' && this.password === '1234') {
-                    this.isLoggedIn = true;
-                } else {
-                    alert('登入失敗');
-                }
-            },
             handleFileUpload(event) {
                 this.receiptFile = event.target.files[0];
             },
@@ -591,150 +673,70 @@
                     return;
                 }
 
-                // 模擬送出請假資料 (請假日期需要轉換格式以匹配 mockSchedules)
                 const dateParts = this.selectedDate.split('-');
-                const formattedDate = `${dateParts[0]}-${parseInt(dateParts[1])}-${parseInt(dateParts[2])}`;
-
-                const leaveData = {
-                    date: formattedDate, // YYYY-M-D 格式
-                    employeeId: 'E001', // 假設登入員工為 E001
-                    leaveHour: this.leaveHour,
-                    leaveType: this.leaveType,
-                    receipt: this.receiptFile ? this.receiptFile.name : '無',
-                    status: 'Pending'
-                };
                 
-                this.$emit('updateSchedule', leaveData);
+                this.$emit('updateSchedule', {
+                    employeeId: this.employeeId,
+                    date: `${dateParts[0]}-${parseInt(dateParts[1])}-${parseInt(dateParts[2])}`,
+                    type: 'Leave', // 特別標註為請假
+                    leaveType: this.leaveType,
+                });
 
                 this.showAlert = true;
                 setTimeout(() => {
                     this.showAlert = false;
                 }, 3000);
 
-                this.selectedDate = null;
+                this.selectedDate = new Date().toISOString().split('T')[0];
                 this.leaveHour = '8.0';
                 this.leaveType = 'Sick';
                 this.receiptFile = null;
             }
         },
         template: `
-            <div>
+             <div class="space-y-6">
                 <h2 class="text-2xl font-bold mb-4">我要請假</h2>
+
+                <p class="text-sm text-gray-600 bg-gray-100 p-2 rounded-lg">當前登入：{{ employeeName }} ({{ employeeId }})</p>
                 
-                <div v-if="!isLoggedIn" class="space-y-4 p-6 bg-gray-50 rounded-lg shadow-md">
-                    <input v-model="employeeId" type="text" placeholder="員工編號" class="w-full p-3 border rounded-lg">
-                    <input v-model="password" type="password" placeholder="密碼" class="w-full p-3 border rounded-lg">
-                    <button @click="handleLogin" class="w-full bg-dark-bg text-white py-3 rounded-lg font-semibold">登 入</button>
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <label class="block text-lg font-semibold mb-2">請選擇請假日期</label>
+                    <input type="date" v-model="selectedDate" class="w-full p-3 border rounded-lg focus:ring-accent-red focus:border-accent-red">
                 </div>
 
-                <div v-else class="space-y-6">
-                    <div class="bg-white p-4 rounded-lg shadow-lg">
-                        <label class="block text-lg font-semibold mb-2">請選擇請假日期</label>
-                        <input type="date" v-model="selectedDate" class="w-full p-3 border rounded-lg focus:ring-accent-red focus:border-accent-red">
-                    </div>
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <label class="block text-lg font-semibold mb-2">請假時數/整天</label>
+                    <select v-model="leaveHour" class="w-full p-3 border rounded-lg focus:ring-accent-red focus:border-accent-red appearance-none">
+                        <option v-for="hour in leaveHoursOptions" :key="hour" :value="hour">{{ hour }} 小時</option>
+                    </select>
+                </div>
 
-                    <div class="bg-white p-4 rounded-lg shadow-lg">
-                        <label class="block text-lg font-semibold mb-2">請假時數/整天</label>
-                        <select v-model="leaveHour" class="w-full p-3 border rounded-lg focus:ring-accent-red focus:border-accent-red appearance-none">
-                            <option v-for="hour in leaveHoursOptions" :key="hour" :value="hour">{{ hour }} 小時</option>
-                        </select>
-                    </div>
-
-                    <div class="bg-white p-4 rounded-lg shadow-lg">
-                        <label class="block text-lg font-semibold mb-2">選擇假別</label>
-                        <div class="flex space-x-4">
-                            <div v-for="option in leaveTypeOptions" :key="option.value" class="flex items-center">
-                                <input type="radio" :id="'leaveType-' + option.value" :value="option.value" v-model="leaveType" class="text-accent-red focus:ring-accent-red">
-                                <label :for="'leaveType-' + option.value" class="ml-2">{{ option.label }}</label>
-                            </div>
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <label class="block text-lg font-semibold mb-2">選擇假別</label>
+                    <div class="flex space-x-4">
+                        <div v-for="option in leaveTypeOptions" :key="option.value" class="flex items-center">
+                            <input type="radio" :id="'leaveType-' + option.value" :value="option.value" v-model="leaveType" class="text-accent-red focus:ring-accent-red">
+                            <label :for="'leaveType-' + option.value" class="ml-2">{{ option.label }}</label>
                         </div>
                     </div>
-
-                    <div class="bg-white p-4 rounded-lg shadow-lg">
-                        <label class="block text-lg font-semibold mb-2">上傳看診收據</label>
-                        <label for="receipt-upload" class="block w-full text-center py-3 border border-dashed border-gray-400 text-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 transition duration-150">
-                            <span v-if="receiptFile">{{ receiptFile.name }} (已選取)</span>
-                            <span v-else>點擊上傳看診收據</span>
-                            <input type="file" id="receipt-upload" @change="handleFileUpload" accept="image/*,.pdf" class="hidden">
-                        </label>
-                        <p v-if="leaveType === 'Sick'" class="text-sm text-red-500 mt-2">請假類型為病假時必填。</p>
-                    </div>
-
-                    <button @click="submitLeave" class="w-full bg-accent-red text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition duration-150">
-                        確認送出請假
-                    </button>
-                    
-                    <div v-if="showAlert" class="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-lg shadow-xl transition duration-300">
-                        請假申請已送出！班表已更新。
-                    </div>
                 </div>
-            </div>
-        `
-    };
 
-    // --- Component: 後台管理 (AdminPanel) (邏輯簡化不變) ---
-    const AdminPanel = {
-        // ... (保持原有的登入、後台功能)
-        data() {
-            return {
-                isLoggedIn: false,
-                adminAccount: '',
-                adminPassword: '',
-            }
-        },
-        methods: {
-            handleLogin() {
-                if (this.adminAccount === 'admin' && this.adminPassword === 'admin123') {
-                    this.isLoggedIn = true;
-                } else {
-                    alert('管理員帳號或密碼錯誤');
-                }
-            }
-        },
-        template: `
-            <div>
-                <h2 class="text-2xl font-bold mb-4">後台管理</h2>
-                
-                <div v-if="!isLoggedIn" class="space-y-4 p-6 bg-gray-50 rounded-lg shadow-md">
-                    <input v-model="adminAccount" type="text" placeholder="管理員帳號" class="w-full p-3 border rounded-lg">
-                    <input v-model="adminPassword" type="password" placeholder="密碼" class="w-full p-3 border rounded-lg">
-                    <button @click="handleLogin" class="w-full bg-dark-bg text-white py-3 rounded-lg font-semibold">登 入</button>
-                    <div class="flex justify-between text-sm mt-3">
-                        <a href="#" class="text-accent-red hover:underline">創建帳號</a>
-                        <a href="#" class="text-accent-red hover:underline">忘記密碼</a>
-                    </div>
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <label class="block text-lg font-semibold mb-2">上傳看診收據</label>
+                    <label for="receipt-upload" class="block w-full text-center py-3 border border-dashed border-gray-400 text-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 transition duration-150">
+                        <span v-if="receiptFile">{{ receiptFile.name }} (已選取)</span>
+                        <span v-else>點擊上傳看診收據</span>
+                        <input type="file" id="receipt-upload" @change="handleFileUpload" accept="image/*,.pdf" class="hidden">
+                    </label>
+                    <p v-if="leaveType === 'Sick'" class="text-sm text-red-500 mt-2">請假類型為病假時必填。</p>
                 </div>
-                
-                <div v-else class="space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <button class="p-4 bg-gray-100 rounded-lg shadow hover:bg-gray-200">📊 統計報表</button>
-                        <button class="p-4 bg-gray-100 rounded-lg shadow hover:bg-gray-200">👤 員工資料創建</button>
-                        <button class="p-4 bg-gray-100 rounded-lg shadow hover:bg-gray-200">📜 查看出勤資料</button>
-                        <button class="p-4 bg-gray-100 rounded-lg shadow hover:bg-gray-200">✏️ 編輯員工班表</button>
-                    </div>
-                    
-                    <div class="p-4 bg-white rounded-lg shadow-lg">
-                        <h3 class="text-lg font-bold mb-3">累積資料 (當月/年度)</h3>
-                        <ul class="space-y-2 text-sm">
-                            <li class="flex justify-between py-1 border-b"><span>休假天數</span><span class="font-semibold">8 / 96 天</span></li>
-                            <li class="flex justify-between py-1 border-b"><span>病假天數</span><span class="font-semibold">1 / 5 天 <button class="text-accent-red text-xs ml-2 hover:underline">查看收據</button></span></li>
-                            <li class="flex justify-between py-1 border-b"><span>事假天數</span><span class="font-semibold">0 / 3 天</span></li>
-                            <li class="flex justify-between py-1"><span>加班時數</span><span class="font-semibold text-green-600">4 小時</span></li>
-                        </ul>
-                    </div>
 
-                    <div class="p-4 bg-white rounded-lg shadow-lg">
-                         <h3 class="text-lg font-bold mb-3">創建員工資料</h3>
-                         <input type="text" placeholder="(1) 員工編號" class="w-full p-2 border rounded-lg mb-2">
-                         <input type="password" placeholder="(2) 密碼" class="w-full p-2 border rounded-lg mb-2">
-                         <input type="text" placeholder="(3) 員工名稱" class="w-full p-2 border rounded-lg mb-2">
-                         <div class="flex space-x-4 mb-2">
-                            <label><input type="checkbox" class="text-dark-bg"> 台北店</label>
-                            <label><input type="checkbox" class="text-dark-bg"> 台中店</label>
-                         </div>
-                         <input type="number" placeholder="(5) 可排休天數" class="w-full p-2 border rounded-lg mb-3">
-                         <button class="w-full bg-dark-bg text-white py-2 rounded-lg">創建員工</button>
-                    </div>
+                <button @click="submitLeave" class="w-full bg-accent-red text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition duration-150">
+                    確認送出請假
+                </button>
+                
+                <div v-if="showAlert" class="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-lg shadow-xl transition duration-300">
+                    請假申請已送出！
                 </div>
             </div>
         `
@@ -745,39 +747,137 @@
     const App = {
         components: {
             CalendarView,
-            NextMonthSchedule,
             ScheduleRequest,
             LeaveRequest,
-            AdminPanel
         },
         data() {
-            // 修正：使用 'zh-TW' 和 'Asia/Taipei' 獲取當前時間
+            // 台灣時區處理
             const now = new Date();
             const timeZone = 'Asia/Taipei';
+            const currentYear = parseInt(now.toLocaleString('zh-TW', { year: 'numeric', timeZone }));
+            const currentMonth = parseInt(now.toLocaleString('zh-TW', { month: 'numeric', timeZone }));
+            const currentMonthKey = `${currentYear}-${currentMonth}`;
 
-            const currentYear = now.toLocaleString('zh-TW', { year: 'numeric', timeZone });
-            const currentMonth = now.toLocaleString('zh-TW', { month: 'numeric', timeZone });
-            
+            // 員工可排休天數限制
+            const staffLimits = {
+                'Aaron': 5, '百九': 5, '淳淳': 5, '小樂': 8,
+                '卡比獸': 5, 'Yumi': 7, 'Bebe': 8, '彥筑': 8,
+                '小夏': 8, '阿泓': 5, '晏庭': 8, '美樂蒂': 8
+            };
+
+            // 員工基礎資料 (包含 ID、姓名、分店)
+            const staff = [
+                { id: 'E001', name: 'Aaron', location: 'Taipei' },
+                { id: 'E002', name: '百九', location: 'Taipei' },
+                { id: 'E003', name: '淳淳', location: 'Taipei' },
+                { id: 'E004', name: '小樂', location: 'Taipei' },
+                { id: 'E005', name: '卡比獸', location: 'Taichung' },
+                { id: 'E006', name: 'Yumi', location: 'Taichung' },
+                { id: 'E007', name: 'Bebe', location: 'Taichung' },
+                { id: 'E008', name: '彥筑', location: 'Taichung' },
+                { id: 'E009', name: '小夏', location: 'Taichung' },
+                { id: 'E010', name: '阿泓', location: 'Taichung' },
+                { id: 'E011', name: '晏庭', location: 'Taichung' },
+                { id: 'E012', name: '美樂蒂', location: 'Taichung' },
+            ];
+
             return {
                 currentPage: '當月班表',
-                pages: ['當月班表', '次月班表', '我要排班', '我要請假', '後台管理'],
                 isMenuOpen: false,
-                isWorkingMode: true, 
-                currentYear: parseInt(currentYear),
-                currentMonth: parseInt(currentMonth),
+                isWorkingMode: true, // 預設顯示值班人員
                 
-                // --- Mock Data 模擬後端資料庫 ---
-                staff: [
-                    { id: 'E001', name: '王小明', location: 'Taipei' },
-                    { id: 'E002', name: '陳大華', location: 'Taipei' },
-                    { id: 'E003', name: '李美美', location: 'Taichung' },
-                    { id: 'E004', name: '吳阿中', location: 'Taichung' },
-                ],
-                // 模擬班表: { employeeId: 'E001', date: 'YYYY-M-D', type: 'GeneralOff'/'SpecialAnnual'/'Sick'/'Personal', leaveType: 'Sick'/'Personal' }
+                // 月份選擇
+                monthKeys: this.generateMonthKeys(currentYear, currentMonth, 2026, 6), // 範圍到 2026 年 6 月
+                selectedMonthKey: currentMonthKey, // 預設為當前月份
+                
+                staffLimits,
+                staff,
+                
+                // Mock Data 模擬排班資料庫 (格式: YYYY-M-D)
                 mockSchedules: [
-                    // 範例：E001 5號 排休
-                    { employeeId: 'E001', date: `${currentYear}-${currentMonth}-5`, type: 'GeneralOff' },
-                    // 範例：E002 6號 請病假 (紅字顯示)
-                    { employeeId: 'E002', date: `${currentYear}-${currentMonth}-6`, type: 'Leave', leaveType: 'Sick' },
-                    // 範例：E003 10號 請事假 (紅字顯示)
-                    { employeeId: 'E003', date: `${currentYear}-${currentMonth}-10`, type: 'Leave', leaveType: 'Personal' },
+                    { employeeId: 'E001', date: `${currentYear}-${currentMonth}-5`, type: 'GeneralOff' }, // Aaron 排休
+                    { employeeId: 'E002', date: `${currentYear}-${currentMonth}-6`, type: 'Leave', leaveType: 'Sick' }, // 百九 病假
+                    { employeeId: 'E003', date: `${currentYear}-${currentMonth}-10`, type: 'GeneralOff' }, // 淳淳 排休
+                    { employeeId: 'E005', date: `${currentYear}-${currentMonth}-15`, type: 'SpecialAnnual' }, // 卡比獸 特休
+                ],
+                showScrollToTop: false,
+            };
+        },
+        computed: {
+            currentYear() {
+                return parseInt(this.selectedMonthKey.split('-')[0]);
+            },
+            currentMonth() {
+                return parseInt(this.selectedMonthKey.split('-')[1]);
+            },
+            taipeiStaff() {
+                return this.staff.filter(s => s.location === 'Taipei');
+            },
+            taichungStaff() {
+                return this.staff.filter(s => s.location === 'Taichung');
+            }
+        },
+        methods: {
+            // 生成月份選單範圍
+            generateMonthKeys(startYear, startMonth, endYear, endMonth) {
+                const keys = [];
+                let year = startYear;
+                let month = startMonth;
+
+                while (year < endYear || (year === endYear && month <= endMonth)) {
+                    keys.push(`${year}-${month}`);
+                    month++;
+                    if (month > 12) {
+                        month = 1;
+                        year++;
+                    }
+                }
+                return keys;
+            },
+            toggleMenu() {
+                this.isMenuOpen = !this.isMenuOpen;
+            },
+            navigateTo(page) {
+                this.currentPage = page;
+                this.isMenuOpen = false;
+            },
+            // 更新班表資料 (由排班/請假頁面觸發)
+            updateMockSchedules(data) {
+                // 檢查是否已存在 (避免重複提交)
+                const existingIndex = this.mockSchedules.findIndex(s => 
+                    s.employeeId === data.employeeId && s.date === data.date
+                );
+
+                if (existingIndex > -1) {
+                    // 如果已存在，則替換
+                    this.mockSchedules[existingIndex] = data;
+                } else {
+                    // 否則新增
+                    this.mockSchedules.push(data);
+                }
+            },
+            // 返回頂部按鈕邏輯
+            scrollToTop() {
+                document.getElementById('main-content').scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            checkScroll() {
+                const mainContent = document.getElementById('main-content');
+                if (mainContent) {
+                    this.showScrollToTop = mainContent.scrollTop > 100;
+                }
+            }
+        },
+        mounted() {
+            // 啟用滾動監聽
+            document.getElementById('main-content').addEventListener('scroll', this.checkScroll);
+        },
+        beforeUnmount() {
+            document.getElementById('main-content').removeEventListener('scroll', this.checkScroll);
+        }
+    };
+
+    createApp(App).mount('#app');
+</script>
+
+</body>
+</html>
