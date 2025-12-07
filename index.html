@@ -29,8 +29,17 @@
 
         /* 圓弧銜接效果 */
         .curved-banner-container {
-            /* 為了容納圓弧，給予底部額外空間 */
+            /* 圖片容器高度 250px */
+            height: 250px; 
             padding-bottom: 50px;
+        }
+        /* 確保圖片正確顯示，即使尺寸為 1080x400 */
+        .banner-image {
+             width: 100%;
+             height: 100%;
+             object-fit: cover; /* 確保圖片覆蓋整個容器 */
+             object-position: center;
+             opacity: 0.9;
         }
 
         .curved-background-shape {
@@ -43,13 +52,13 @@
             background-color: white; /* 讓內容區域背景色為白色 */
             border-top-left-radius: 50% 50%; /* 圓弧半徑 */
             border-top-right-radius: 50% 50%;
-            z-index: 10; /* 確保圓弧在內容上方 */
+            z-index: 10; 
         }
         
         .main-content-wrapper {
             background-color: white;
             position: relative;
-            z-index: 20; /* 確保內容區塊在圓弧上方 */
+            z-index: 20; 
             margin-top: -50px; /* 負邊距向上拉動重疊 */
             padding-top: 20px;
         }
@@ -68,7 +77,7 @@
 
 <div id="app" class="max-w-screen-md mx-auto shadow-xl min-h-screen bg-white">
     <header class="p-4 flex justify-between items-center fixed top-0 left-0 right-0 max-w-screen-md mx-auto z-50 bg-white shadow-md">
-        <h1 class="text-lg font-semibold text-dark-bg">名錶雷達站</h1>
+        <h1 class="text-lg font-semibold text-dark-bg">名錶雷達站 RD-WATCH</h1>
         <button @click="toggleMenu" class="p-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -77,18 +86,18 @@
     </header>
 
     <main class="pt-16">
-        <div class="curved-banner-container relative overflow-hidden h-[250px] bg-dark-bg">
+        <div class="curved-banner-container relative overflow-hidden bg-dark-bg">
             <img src="./線上排班系統Benner.jpg" alt="線上排班系統 Banner" 
-                 class="w-full h-[250px] object-cover object-center opacity-90">
+                 class="banner-image">
             <div class="curved-background-shape"></div>
         </div>
 
         <div class="main-content-wrapper">
             <section v-if="currentPage === '當月班表'" class="p-4">
-                <h2 class="text-2xl font-bold mb-4">當月班表</h2>
+                <h2 class="text-2xl font-bold mb-2">當月班表</h2>
                 
-                <div class="text-center my-4 p-2 bg-light-gray rounded-lg">
-                    <p class="text-xl font-medium">{{ currentYear }} 年 {{ currentMonth }} 月</p>
+                <div class="text-left mb-6 text-xl font-medium text-gray-600">
+                    {{ currentYear }} 年 {{ currentMonth }} 月
                 </div>
 
                 <div class="flex justify-around bg-gray-100 p-1 rounded-full mb-6 shadow-inner">
@@ -112,7 +121,13 @@
                             台北店班表
                             <span class="text-sm text-gray-500">員工人數: {{ taipeiStaff.length }}</span>
                         </h3>
-                        <ScheduleTable :staff="taipeiStaff" :is-working-mode="isWorkingMode" :month-days="currentMonthDays" :mock-schedules="mockSchedules" location="Taipei" />
+                        <CalendarView 
+                            :staff="taipeiStaff" 
+                            :is-working-mode="isWorkingMode" 
+                            :year="currentYear"
+                            :month="currentMonth"
+                            :mock-schedules="mockSchedules"
+                        />
                     </div>
 
                     <div class="p-4 border border-gray-100 rounded-lg shadow-sm">
@@ -120,18 +135,31 @@
                             台中店班表
                             <span class="text-sm text-gray-500">員工人數: {{ taichungStaff.length }}</span>
                         </h3>
-                        <ScheduleTable :staff="taichungStaff" :is-working-mode="isWorkingMode" :month-days="currentMonthDays" :mock-schedules="mockSchedules" location="Taichung" />
+                         <CalendarView 
+                            :staff="taichungStaff" 
+                            :is-working-mode="isWorkingMode" 
+                            :year="currentYear"
+                            :month="currentMonth"
+                            :mock-schedules="mockSchedules"
+                        />
                     </div>
                 </div>
 
             </section>
 
             <section v-if="currentPage === '次月班表'" class="p-4">
-                <NextMonthSchedule :current-year="currentYear" :next-month="nextMonth" :next-month-days="nextMonthDays" :taipei-staff="taipeiStaff" :taichung-staff="taichungStaff" :mock-schedules="mockSchedules" />
+                <NextMonthSchedule 
+                    :current-year="currentYear" 
+                    :next-month="nextMonth" 
+                    :next-month-days="nextMonthDays" 
+                    :taipei-staff="taipeiStaff" 
+                    :taichung-staff="taichungStaff" 
+                    :mock-schedules="mockSchedules"
+                />
             </section>
 
             <section v-if="currentPage === '我要排班'" class="p-4">
-                <ScheduleRequest :current-month="currentMonth" :current-year="currentYear" :current-month-days="currentMonthDays" @goto-home="currentPage = '當月班表'" />
+                <ScheduleRequest :current-month="currentMonth" :current-year="currentYear" @goto-home="currentPage = '當月班表'" />
             </section>
 
             <section v-if="currentPage === '我要請假'" class="p-4">
@@ -172,81 +200,120 @@
         return new Date(year, month, 0).getDate();
     };
 
-    // --- Component: 排班表表格 (ScheduleTable) ---
-    const ScheduleTable = {
-        props: ['staff', 'isWorkingMode', 'monthDays', 'mockSchedules', 'location'],
+    // 獲取一個月的第一天是星期幾 (0=日, 6=六)
+    const getFirstDayOfMonth = (year, month) => {
+        // month is 1-indexed
+        return new Date(year, month - 1, 1).getDay();
+    };
+
+
+    // --- Component: 月曆視圖 (CalendarView) ---
+    const CalendarView = {
+        props: ['staff', 'isWorkingMode', 'year', 'month', 'mockSchedules'],
         template: `
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-30">員工</th>
-                            <th v-for="day in monthDays" :key="day" class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                {{ day }}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <tr v-for="employee in staff" :key="employee.id">
-                            <td class="px-3 py-2 whitespace-nowrap text-sm font-medium sticky left-0 bg-white z-30"
-                                :class="{ 'text-red-500': getDailyLeave(employee, day) }">
-                                {{ employee.name }} 
-                                <span v-if="getDailyLeave(employee, day)" class="text-xs font-semibold">({{ getDailyLeave(employee, day) }})</span>
-                            </td>
-                            <td v-for="day in monthDays" :key="day" class="px-3 py-2 whitespace-nowrap text-sm text-center">
-                                <span v-if="getScheduleStatus(employee, day) === 'W' && isWorkingMode">值</span>
-                                <span v-else-if="getScheduleStatus(employee, day) === 'O' && !isWorkingMode">休</span>
-                                <span v-else-if="getScheduleStatus(employee, day) === 'L'">
-                                    <span v-if="getDailyLeave(employee, day)" :class="{'text-red-500': isWorkingMode}">{{ getDailyLeave(employee, day) }}</span>
-                                    <span v-else>
-                                        {{ isWorkingMode ? '' : '休' }}
-                                    </span>
+            <div class="calendar mt-4 bg-gray-50 p-2 rounded-lg shadow-inner">
+                <div class="grid grid-cols-7 text-center text-sm font-bold text-gray-500 mb-1">
+                    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                </div>
+                
+                <div class="grid grid-cols-7 gap-1">
+                    <div v-for="i in startPadding" :key="'pad'+i" class="aspect-square bg-gray-100/50"></div>
+                    
+                    <div v-for="day in monthDays" :key="day" 
+                         class="aspect-square p-0.5 border border-gray-200 rounded-sm overflow-hidden"
+                         :class="{'bg-white': true}">
+                        <div class="text-xs font-semibold text-right p-0.5 mb-1" :class="{'text-red-500': new Date(year, month - 1, day).getDay() === 0, 'text-gray-500': new Date(year, month - 1, day).getDay() === 6}">
+                            {{ day }}
+                        </div>
+                        
+                        <div class="text-[10px] space-y-0.5 h-full overflow-y-auto custom-scrollbar">
+                            <div v-for="data in getDailySchedule(day)" :key="data.employeeId"
+                                 class="truncate px-0.5 rounded"
+                                 :class="[data.isLeave ? 'text-red-500 font-semibold' : (data.isOffDay && !isWorkingMode) ? 'text-green-600' : 'text-gray-700']">
+                                
+                                <span v-if="isWorkingMode ? !data.isOffDay : (data.isOffDay || data.isLeave)">
+                                    {{ data.name }}
+                                    <span v-if="data.isLeave">({{ data.leaveTypeShort }})</span>
+                                    <span v-else-if="data.isOffDay && !isWorkingMode">(休)</span>
                                 </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `,
+        computed: {
+            monthDays() {
+                return getDaysInMonth(this.year, this.month);
+            },
+            startPadding() {
+                // 計算需要填補的空白天數
+                return getFirstDayOfMonth(this.year, this.month);
+            },
+            // 模擬請假類型縮寫
+            leaveTypeMap() {
+                return { 'Sick': '病', 'Personal': '事', 'SpecialAnnual': '特' };
+            }
+        },
         methods: {
-            // 模擬獲取員工某一天的排班狀態: 'W'=值班, 'O'=排休, 'L'=請假
-            getScheduleStatus(employee, day) {
-                const dateKey = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
-                const schedule = this.mockSchedules.find(s => 
-                    s.employeeId === employee.id && s.date === dateKey
-                );
-                
-                if (schedule) {
-                    if (schedule.leaveType) return 'L'; // 請假
-                    if (schedule.type === 'GeneralOff') return 'O'; // 排休
+            getDailySchedule(day) {
+                const dateKey = `${this.year}-${this.month}-${day}`;
+                const dailyData = [];
+
+                this.staff.forEach(employee => {
+                    const schedule = this.mockSchedules.find(s => 
+                        s.employeeId === employee.id && s.date === dateKey
+                    );
+                    
+                    let isLeave = false;
+                    let isOffDay = false;
+                    let leaveTypeShort = null;
+
+                    if (schedule) {
+                        if (schedule.type === 'Leave') {
+                            isLeave = true;
+                            leaveTypeShort = this.leaveTypeMap[schedule.leaveType] || '假';
+                        }
+                        if (schedule.type === 'GeneralOff' || schedule.type === 'SpecialAnnual') {
+                            isOffDay = true;
+                        }
+                    }
+
+                    // 只有在當天是值班、或當天是休假/請假且模式為休假時才顯示
+                    // 為了月曆模式，我們全部顯示，讓用戶看到誰在排休/請假
+                    dailyData.push({
+                        employeeId: employee.id,
+                        name: employee.name,
+                        isLeave,
+                        isOffDay,
+                        leaveTypeShort
+                    });
+                });
+
+                // 過濾掉值班模式下不是請假也不是休假的員工 (這樣月曆看起來才不會太擁擠)
+                if (this.isWorkingMode) {
+                    return dailyData.filter(d => d.isLeave || d.isOffDay === false);
                 }
                 
-                // 模擬未排班預設為值班 ('W')
-                return 'W';
-            },
-            // 獲取請假類型並顯示
-            getDailyLeave(employee, day) {
-                 const dateKey = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
-                 const schedule = this.mockSchedules.find(s => 
-                    s.employeeId === employee.id && s.date === dateKey && s.leaveType
-                );
-                if (!schedule) return null;
-                
-                // 轉換請假類型縮寫
-                const typeMap = { 'Sick': '病', 'Personal': '事' };
-                return typeMap[schedule.leaveType] || null;
+                return dailyData;
             }
         }
     };
 
+
     // --- Component: 次月班表 (NextMonthSchedule) ---
     const NextMonthSchedule = {
         props: ['currentYear', 'nextMonth', 'nextMonthDays', 'taipeiStaff', 'taichungStaff', 'mockSchedules'],
-        components: { ScheduleTable },
+        components: { CalendarView },
         data() {
             return {
                 isWorkingMode: true,
-                isSchedulingOpen: false, // 假設今天日期是25號，所以排班是開放的
+                isSchedulingOpen: false, 
+            }
+        },
+        computed: {
+            nextMonthYear() {
+                return this.nextMonth === 1 ? this.currentYear + 1 : this.currentYear;
             }
         },
         mounted() {
@@ -256,10 +323,10 @@
         },
         template: `
             <div class="p-4">
-                <h2 class="text-2xl font-bold mb-4">次月班表</h2>
+                <h2 class="text-2xl font-bold mb-2">次月班表</h2>
 
-                <div class="text-center my-4 p-2 bg-light-gray rounded-lg">
-                    <p class="text-xl font-medium">{{ nextMonth === 1 ? currentYear + 1 : currentYear }} 年 {{ nextMonth }} 月</p>
+                <div class="text-left mb-6 text-xl font-medium text-gray-600">
+                    {{ nextMonthYear }} 年 {{ nextMonth }} 月
                 </div>
                 
                 <div v-if="!isSchedulingOpen" class="relative bg-gray-200 h-96 flex items-center justify-center rounded-lg overflow-hidden">
@@ -293,7 +360,13 @@
                                 台北店班表
                                 <span class="text-sm text-gray-500">員工人數: {{ taipeiStaff.length }}</span>
                             </h3>
-                            <ScheduleTable :staff="taipeiStaff" :is-working-mode="isWorkingMode" :month-days="nextMonthDays" :mock-schedules="mockSchedules" location="Taipei" />
+                            <CalendarView 
+                                :staff="taipeiStaff" 
+                                :is-working-mode="isWorkingMode" 
+                                :year="nextMonthYear"
+                                :month="nextMonth"
+                                :mock-schedules="mockSchedules"
+                            />
                         </div>
                     </div>
                 </div>
@@ -301,9 +374,10 @@
         `
     };
 
-    // --- Component: 我要排班 (ScheduleRequest) ---
+    // --- Component: 我要排班 (ScheduleRequest) (邏輯簡化不變) ---
     const ScheduleRequest = {
-        props: ['currentYear', 'currentMonth', 'currentMonthDays'],
+        // ... (保持原有的登入、排班邏輯)
+        props: ['currentYear', 'currentMonth'],
         emits: ['gotoHome'],
         data() {
             return {
@@ -332,27 +406,33 @@
                 return this.currentEmployee.maxOffDays - this.selectedDates.length;
             },
             calendarGrid() {
-                // 簡化：只顯示一個月的日期
-                const days = [];
-                for (let i = 1; i <= this.currentMonthDays; i++) {
-                    days.push(i);
+                 // 修正：計算當月天數，以便渲染月曆
+                const daysInMonth = getDaysInMonth(this.currentYear, this.currentMonth);
+                const firstDay = getFirstDayOfMonth(this.currentYear, this.currentMonth);
+                const grid = [];
+                for (let i = 0; i < firstDay; i++) {
+                    grid.push(null); // 填充上個月的空白
                 }
-                return days;
+                for (let day = 1; day <= daysInMonth; day++) {
+                    grid.push(day);
+                }
+                return grid;
             }
         },
         methods: {
             handleLogin() {
-                // 模擬登入邏輯
                 if (this.employeeId === 'E001' && this.password === '1234') {
                     this.isLoggedIn = true;
-                    this.selectedDates = []; // 清空已選日期
+                    this.selectedDates = []; 
                 } else {
                     alert('登入失敗');
                 }
             },
             toggleDateSelection(day) {
+                if (!day) return; // 忽略空白格子
+                
                 const dateKey = `${this.currentYear}-${this.currentMonth}-${day}`;
-                const index = this.selectedDates.indexOf(dateKey);
+                const index = this.selectedDates.findIndex(d => d.date === dateKey); // 檢查是否有該日期的紀錄
 
                 if (index > -1) {
                     // 取消選取
@@ -364,18 +444,21 @@
                 }
             },
             isDateSelected(day) {
+                if (!day) return false;
                 const dateKey = `${this.currentYear}-${this.currentMonth}-${day}`;
-                return this.selectedDates.includes(dateKey);
+                return this.selectedDates.some(d => d.date === dateKey);
             },
             confirmLeaveType() {
-                if (this.leaveType === 'GeneralOff' && this.selectedDates.length >= this.currentEmployee.maxOffDays) {
+                const generalOffCount = this.selectedDates.filter(d => d.type === 'GeneralOff').length;
+                
+                if (this.leaveType === 'GeneralOff' && generalOffCount >= this.currentEmployee.maxOffDays) {
                     alert('您的休假天數已滿，請選擇其他假別');
                     return;
                 }
                 
                 // 確定選取
-                if (this.tempSelectedDate && !this.selectedDates.includes(this.tempSelectedDate)) {
-                    this.selectedDates.push(this.tempSelectedDate);
+                if (this.tempSelectedDate && !this.selectedDates.some(d => d.date === this.tempSelectedDate)) {
+                    this.selectedDates.push({ date: this.tempSelectedDate, type: this.leaveType });
                 }
                 this.showLeaveModal = false;
                 this.tempSelectedDate = null;
@@ -385,12 +468,7 @@
                     alert('請選擇您要排休的日期！');
                     return;
                 }
-                
-                // 模擬送出排班資料到後端 (這裡會需要實際的 API)
-                console.log('送出排班申請：', this.selectedDates);
                 alert('排班申請已成功送出！');
-                
-                // 送出後跳回首頁
                 this.$emit('gotoHome');
             }
         },
@@ -425,16 +503,18 @@
                         </div>
                         
                         <div class="grid grid-cols-7 gap-1">
-                            <div v-for="day in calendarGrid" :key="day" 
+                            <div v-for="(day, index) in calendarGrid" :key="index" 
                                  @click="toggleDateSelection(day)"
                                  class="aspect-square flex flex-col items-center justify-center p-1 rounded-lg transition duration-100 cursor-pointer"
                                  :class="{
-                                     'bg-gray-200': isDateSelected(day),
-                                     'hover:bg-gray-100': !isDateSelected(day)
+                                     'bg-gray-100': !day, /* 上個月的空白 */
+                                     'bg-gray-300': day && isDateSelected(day), /* 選取起來的深色 */
+                                     'hover:bg-gray-100': day && !isDateSelected(day)
                                  }">
-                                <span class="text-lg font-semibold">{{ day }}</span>
-                                <span class="text-xs text-gray-500 mt-1">
-                                    <span v-if="isDateSelected(day)">{{ currentEmployee.name }}</span> 
+                                <span v-if="day" class="text-lg font-semibold">{{ day }}</span>
+                                <span v-else></span>
+                                <span v-if="day" class="text-xs text-gray-500 mt-1">
+                                    <span v-if="isDateSelected(day)">已選</span> 
                                     <span v-else>...</span>
                                 </span>
                             </div>
@@ -451,7 +531,7 @@
                                 </div>
                             </div>
                             <div class="mt-6 flex justify-end space-x-3">
-                                <button @click="showLeaveModal = false" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">取消</button>
+                                <button @click="showLeaveModal = false; tempSelectedDate = null;" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">取消</button>
                                 <button @click="confirmLeaveType" class="px-4 py-2 bg-accent-red text-white rounded-lg hover:bg-red-600 transition duration-150">確認</button>
                             </div>
                         </div>
@@ -465,8 +545,9 @@
         `
     };
 
-    // --- Component: 我要請假 (LeaveRequest) ---
+    // --- Component: 我要請假 (LeaveRequest) (邏輯簡化不變) ---
     const LeaveRequest = {
+        // ... (保持原有的登入、請假邏輯)
         emits: ['updateSchedule'],
         data() {
             return {
@@ -491,7 +572,6 @@
         },
         methods: {
             handleLogin() {
-                // 模擬登入邏輯
                 if (this.employeeId === 'E001' && this.password === '1234') {
                     this.isLoggedIn = true;
                 } else {
@@ -511,19 +591,19 @@
                     return;
                 }
 
-                // 模擬送出請假資料
+                // 模擬送出請假資料 (請假日期需要轉換格式以匹配 mockSchedules)
+                const dateParts = this.selectedDate.split('-');
+                const formattedDate = `${dateParts[0]}-${parseInt(dateParts[1])}-${parseInt(dateParts[2])}`;
+
                 const leaveData = {
-                    date: this.selectedDate,
-                    employeeId: this.employeeId,
+                    date: formattedDate, // YYYY-M-D 格式
+                    employeeId: 'E001', // 假設登入員工為 E001
                     leaveHour: this.leaveHour,
                     leaveType: this.leaveType,
                     receipt: this.receiptFile ? this.receiptFile.name : '無',
                     status: 'Pending'
                 };
                 
-                console.log('請假申請送出：', leaveData);
-                
-                // 觸發 App 實例更新 MockSchedules，模擬班表即時更新
                 this.$emit('updateSchedule', leaveData);
 
                 this.showAlert = true;
@@ -531,7 +611,6 @@
                     this.showAlert = false;
                 }, 3000);
 
-                // 重設表單
                 this.selectedDate = null;
                 this.leaveHour = '8.0';
                 this.leaveType = 'Sick';
@@ -593,8 +672,9 @@
         `
     };
 
-    // --- Component: 後台管理 (AdminPanel) ---
+    // --- Component: 後台管理 (AdminPanel) (邏輯簡化不變) ---
     const AdminPanel = {
+        // ... (保持原有的登入、後台功能)
         data() {
             return {
                 isLoggedIn: false,
@@ -604,7 +684,6 @@
         },
         methods: {
             handleLogin() {
-                // 模擬管理員登入
                 if (this.adminAccount === 'admin' && this.adminPassword === 'admin123') {
                     this.isLoggedIn = true;
                 } else {
@@ -661,27 +740,31 @@
         `
     };
 
+
     // --- Vue App 實例 ---
     const App = {
         components: {
-            ScheduleTable,
+            CalendarView,
             NextMonthSchedule,
             ScheduleRequest,
             LeaveRequest,
             AdminPanel
         },
         data() {
-            const today = new Date();
-            const currentMonth = today.getMonth() + 1;
-            const currentYear = today.getFullYear();
+            // 修正：使用 'zh-TW' 和 'Asia/Taipei' 獲取當前時間
+            const now = new Date();
+            const timeZone = 'Asia/Taipei';
+
+            const currentYear = now.toLocaleString('zh-TW', { year: 'numeric', timeZone });
+            const currentMonth = now.toLocaleString('zh-TW', { month: 'numeric', timeZone });
             
             return {
                 currentPage: '當月班表',
                 pages: ['當月班表', '次月班表', '我要排班', '我要請假', '後台管理'],
                 isMenuOpen: false,
-                isWorkingMode: true, // true: 值班人員, false: 休假人員
-                currentYear,
-                currentMonth,
+                isWorkingMode: true, 
+                currentYear: parseInt(currentYear),
+                currentMonth: parseInt(currentMonth),
                 
                 // --- Mock Data 模擬後端資料庫 ---
                 staff: [
@@ -690,79 +773,11 @@
                     { id: 'E003', name: '李美美', location: 'Taichung' },
                     { id: 'E004', name: '吳阿中', location: 'Taichung' },
                 ],
-                // 模擬班表: { employeeId: 'E001', date: '2025-12-5', type: 'GeneralOff'/'SpecialAnnual'/'Sick'/'Personal', leaveType: 'Sick'/'Personal' }
+                // 模擬班表: { employeeId: 'E001', date: 'YYYY-M-D', type: 'GeneralOff'/'SpecialAnnual'/'Sick'/'Personal', leaveType: 'Sick'/'Personal' }
                 mockSchedules: [
-                    // 範例：E001 12月5號 排休
+                    // 範例：E001 5號 排休
                     { employeeId: 'E001', date: `${currentYear}-${currentMonth}-5`, type: 'GeneralOff' },
-                    // 範例：E002 12月6號 請病假
+                    // 範例：E002 6號 請病假 (紅字顯示)
                     { employeeId: 'E002', date: `${currentYear}-${currentMonth}-6`, type: 'Leave', leaveType: 'Sick' },
-                    // 範例：E003 12月10號 請事假
+                    // 範例：E003 10號 請事假 (紅字顯示)
                     { employeeId: 'E003', date: `${currentYear}-${currentMonth}-10`, type: 'Leave', leaveType: 'Personal' },
-                ]
-            };
-        },
-        computed: {
-            currentMonthDays() {
-                return getDaysInMonth(this.currentYear, this.currentMonth);
-            },
-            nextMonth() {
-                return this.currentMonth === 12 ? 1 : this.currentMonth + 1;
-            },
-            nextMonthDays() {
-                const year = this.currentMonth === 12 ? this.currentYear + 1 : this.currentYear;
-                return getDaysInMonth(year, this.nextMonth);
-            },
-            taipeiStaff() {
-                return this.staff.filter(s => s.location === 'Taipei');
-            },
-            taichungStaff() {
-                return this.staff.filter(s => s.location === 'Taichung');
-            }
-        },
-        methods: {
-            toggleMenu() {
-                this.isMenuOpen = !this.isMenuOpen;
-            },
-            navigateTo(page) {
-                this.currentPage = page;
-                this.isMenuOpen = false;
-            },
-            // 處理請假申請送出後，更新班表資料 (Mock)
-            updateMockSchedules(leaveData) {
-                // 將日期格式轉換為 YYYY-MM-DD
-                const dateParts = leaveData.date.split('-');
-                const formattedDate = `${dateParts[0]}-${parseInt(dateParts[1])}-${parseInt(dateParts[2])}`;
-
-                // 檢查是否已存在該日的排班/請假紀錄
-                const existingIndex = this.mockSchedules.findIndex(s => 
-                    s.employeeId === leaveData.employeeId && s.date === formattedDate
-                );
-
-                const newSchedule = {
-                    employeeId: leaveData.employeeId,
-                    date: formattedDate,
-                    type: 'Leave',
-                    leaveType: leaveData.leaveType,
-                    // 實際還需儲存時數、收據等
-                };
-                
-                if (existingIndex > -1) {
-                    // 覆蓋現有紀錄
-                    this.mockSchedules[existingIndex] = newSchedule;
-                } else {
-                    // 加入新紀錄
-                    this.mockSchedules.push(newSchedule);
-                }
-            }
-        },
-        mounted() {
-            // 確保手機介面 (Tailwind 的 max-w-screen-md)
-            document.body.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary-dark');
-        }
-    };
-
-    createApp(App).mount('#app');
-</script>
-
-</body>
-</html>
